@@ -7,6 +7,9 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torch.utils.data import Dataset, DataLoader
 
+
+
+torch.manual_seed(1337)
 # Set up device
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 print(f"Using device: {device}")
@@ -24,16 +27,15 @@ with open(input_file_path, 'r', encoding='utf-8') as f:
 # this is just for character-level tokentization as i only have a mac M4
 # Sentencepiece is whats used commonly within the NLP community
 chars = sorted(list(set(text)))
-vocab_size = len(chars) # gpt2 is around 50000
+vocab_size = len(chars) # gpt2 is around 50K dimensional embeddings
 
-# Encode and decode 
+# Encode  decode 
 stoi = { ch:i for i,ch in enumerate(chars) }
 itos = { i:ch for i,ch in enumerate(chars) }
 encode = lambda s: [stoi[c] for c in s] # encoder: take a string, output a list of integers
 decode = lambda l: ''.join([itos[i] for i in l]) # decoder: take a list of integers, output a string
 
 
-torch.manual_seed(1337)
 class CharDataset(Dataset):
     def __init__(self, data, block_size):
         self.data = data
@@ -53,7 +55,6 @@ class CharDataset(Dataset):
 
 
 
-torch.manual_seed(1337)
 
 class BigramlanguageModel(nn.Module):
 
