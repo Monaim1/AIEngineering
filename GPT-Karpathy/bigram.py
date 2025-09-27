@@ -37,21 +37,16 @@ decode = lambda l: ''.join([itos[i] for i in l]) # decoder: take a list of integ
 
 
 class CharDataset(Dataset):
-    def __init__(self, data, block_size):
+    def __init__(self, data: torch.Tensor, block_size: int):
         self.data = data
         self.block_size = block_size
         
-    def __len__(self):
+    def __len__(self) -> int:
         return len(self.data) - self.block_size - 1
     
-    def __getitem__(self, idx):
-        # Get a chunk of text of size block_size + 1
+    def __getitem__(self, idx: int) -> tuple[torch.Tensor, torch.Tensor]:
         chunk = self.data[idx:idx + self.block_size + 1]
-    
-        # Split into input and target
-        x = torch.tensor(chunk[:-1], dtype=torch.long)
-        y = torch.tensor(chunk[1:], dtype=torch.long)
-        return x, y
+        return chunk[:-1].clone(), chunk[1:].clone()
 
 
 
@@ -82,6 +77,7 @@ class BigramlanguageModel(nn.Module):
         
         return logits, loss
 
+    @torch.no_grad()
     def generate(self, idx, max_new_tokens):
         idx = idx.to(device)  # Ensure input is on the same device as the model
         for _ in range(max_new_tokens):
@@ -113,7 +109,7 @@ blm = BigramlanguageModel(vocab_size).to(device)
 optimizer = torch.optim.AdamW(blm.parameters(), lr=1e-3)
 
 # Training
-num_epochs = 5
+num_epochs = 3
 
 for epoch in range(num_epochs):
     # Training phase
