@@ -9,6 +9,14 @@ from torch.utils.data import Dataset, DataLoader
 
 
 
+# Create data loaders
+batch_size = 32
+num_epochs = 3
+block_size=8
+learning_rate = 1e-3
+dim_embedding=32
+
+
 torch.manual_seed(1337)
 # Set up device
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -28,6 +36,9 @@ with open(input_file_path, 'r', encoding='utf-8') as f:
 # Sentencepiece is whats used commonly within the NLP community
 chars = sorted(list(set(text)))
 vocab_size = len(chars) # gpt2 is around 50K dimensional embeddings
+
+
+
 
 # Encode  decode 
 stoi = { ch:i for i,ch in enumerate(chars) }
@@ -53,9 +64,10 @@ class CharDataset(Dataset):
 
 class BigramlanguageModel(nn.Module):
 
-    def __init__(self, vocab_size) -> None:
+    def __init__(self, dim_embed) -> None:
         super().__init__()
-        self.token_embedding_table = nn.Embedding(vocab_size, vocab_size) # used to pluck out the embedding of each input idx
+        self.token_embedding_table = nn.Embedding(vocab_size, dim_embed) # used to pluck out the embedding of each input idx
+        self.lm_head = nn.Linear(dim_embed, vocab_size)
         self = self.to(device)  # Move model to device
 
     def forward(self, idx, targets=None):
@@ -65,7 +77,8 @@ class BigramlanguageModel(nn.Module):
             targets = targets.to(device)
 
         # idx and targets are both (B, T) tensor of integers
-        logits = self.token_embedding_table(idx) # (B, T, C) (batch, time, channel) (4, 8, vocab_size)
+        token_embedding = self.token_embedding_table(idx) # (B, T, C) (batch, time, channel) (4, 8, vocab_size)
+        logits = self.lm_head(token_embedding)
 
         if targets is None:
             loss = None
@@ -94,22 +107,20 @@ n = len(tokenized_data)
 train_data = tokenized_data[:int(n*0.9)]
 val_data = tokenized_data[int(n*0.9):]
 
-train_dataset = CharDataset(train_data, block_size=8)
-val_dataset = CharDataset(val_data, block_size=8)
+train_dataset = CharDataset(train_data, block_size=block_size)
+val_dataset = CharDataset(val_data, block_size=block_size)
 
-# Create data loaders
-batch_size = 32
+
 train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
 val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False)
 
 
 
 # Create model and move to device
-blm = BigramlanguageModel(vocab_size).to(device)
-optimizer = torch.optim.AdamW(blm.parameters(), lr=1e-3)
+blm = BigramlanguageModel(dim_embedding).to(device)
+optimizer = torch.optim.AdamW(blm.parameters(), lr=learning_rate)
 
-# Training
-num_epochs = 3
+
 
 for epoch in range(num_epochs):
     # Training phase

@@ -185,7 +185,7 @@ val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False)
 # Initialize model
 model = SimpleTransformer(
     vocab_size=vocab_size,
-    embed_size=64,
+    embed_size=256,
     num_heads=4,
     num_layers=3
 ).to(device)
@@ -193,7 +193,7 @@ model = SimpleTransformer(
 optimizer = torch.optim.AdamW(model.parameters(), lr=1e-4)
 
 # Training
-num_epochs = 5
+num_epochs = 3
 print("Starting Training: ")
 for epoch in range(num_epochs):
     model.train()
