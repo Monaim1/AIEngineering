@@ -10,11 +10,11 @@ from torch.utils.data import Dataset, DataLoader
 
 
 # Create data loaders
-batch_size = 32
-num_epochs = 3
-block_size=8
-learning_rate = 1e-3
-dim_embedding=32
+batch_size = 64
+num_epochs = 5
+block_size=16
+learning_rate = 3e-4
+dim_embedding=64
 
 
 torch.manual_seed(1337)
@@ -67,6 +67,13 @@ class BigramlanguageModel(nn.Module):
     def __init__(self, dim_embed) -> None:
         super().__init__()
         self.token_embedding_table = nn.Embedding(vocab_size, dim_embed) # used to pluck out the embedding of each input idx
+        self.position_embedding_table = nn.Embedding(block_size, dim_embed)
+        self.ffwd = nn.Sequential(
+            nn.Linear(dim_embed, 4 * dim_embed),
+            nn.ReLU(),
+            nn.Linear(4 * dim_embed, dim_embed),
+            nn.Dropout(0.2),
+        )
         self.lm_head = nn.Linear(dim_embed, vocab_size)
         self = self.to(device)  # Move model to device
 
@@ -77,8 +84,12 @@ class BigramlanguageModel(nn.Module):
             targets = targets.to(device)
 
         # idx and targets are both (B, T) tensor of integers
+        B, T = idx.shape
         token_embedding = self.token_embedding_table(idx) # (B, T, C) (batch, time, channel) (4, 8, vocab_size)
-        logits = self.lm_head(token_embedding)
+        pos_embedding = self.position_embedding_table(torch.arange(T)) # (T, C)
+        x = token_embedding + pos_embedding # (B,T,C)
+        x = self.ffwd(x) # (B,T,C)
+        logits = self.lm_head(x) # (B,T,vocab_size)
 
         if targets is None:
             loss = None
@@ -94,7 +105,10 @@ class BigramlanguageModel(nn.Module):
     def generate(self, idx, max_new_tokens):
         idx = idx.to(device)  # Ensure input is on the same device as the model
         for _ in range(max_new_tokens):
-            logits, loss = self(idx)
+            # crop idx to the last block_size tokens
+            idx_cond = idx[:, -block_size:]
+            # get the predictions
+            logits, loss = self(idx_cond)
             logits = logits[:, -1, :] # Focus on the last time step
             probs = F.softmax(logits, dim=-1)
             idx_next = torch.multinomial(probs, num_samples=1)
