@@ -57,7 +57,7 @@ class CharDataset(Dataset):
     
     def __getitem__(self, idx: int) -> tuple[torch.Tensor, torch.Tensor]:
         chunk = self.data[idx:idx + self.block_size + 1]
-        return chunk[:-1].clone(), chunk[1:].clone()
+        return chunk[:-1].clone().to(device), chunk[1:].clone().to(device)
 
 
 
